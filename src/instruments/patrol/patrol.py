@@ -18,9 +18,6 @@ __author__ = "Brent Maranzano"
 __license__ = "MIT"
 
 
-logger = logging.getLogger("instrument.bronkhorst")
-
-
 class Bronkhorst(Instrument, Opc):
     """Object to interact with Bronkhorst flow meter.
     """
@@ -68,7 +65,9 @@ class Bronkhorst(Instrument, Opc):
         """Entry point
         """
         self._connect_instrument()
-        self.start()
+        threading.Thread(target=self._execute_queue, daemon=True).start()
+        threading.Thread(target=self._update_data, daemon=True).start()
+        self._start_services()
 
 
 if __name__ == "__main__":
@@ -89,5 +88,7 @@ if __name__ == "__main__":
         default="INFO"
     )
     args = parser.parse_args()
+    helper_functions.setup_logger(level=args.debug_level)
+    logger = logging.getLogger("bronkhorst")
     bronkhorst = Bronkhorst(args.parameter_file)
     bronkhorst.main()

@@ -6,14 +6,13 @@ General OPC UA client.
 import logging
 from opcua import Client
 from lib import helper_functions
-from pdb import set_trace
 
 __author__ = "Giuseppe Cogoni"
 __author__ = "Brent Maranzano"
 __license__ = "MIT"
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("instrument.opc_sub")
 
 
 class OpcSubHandler(object):
@@ -65,6 +64,7 @@ class Opc(Client):
         handler = OpcSubHandler(queue)
         sub = client.create_subscription(1000, handler)
         handle = sub.subscribe_data_change(client._nodes)
+        logger.info("OPC subscription started")
         return client
 
     def handle_response(self, node, data):

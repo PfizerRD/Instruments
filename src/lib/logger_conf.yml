@@ -11,13 +11,13 @@ formatters:
 handlers:
     console:
         class: logging.StreamHandler
-        level: DEBUG
-        formatter: colored
+        level: INFO
+        formatter: standard
         stream: ext://sys.stdout
 
     info_file_handler:
         class: logging.handlers.RotatingFileHandler
-        level: DEBUG
+        level: INFO
         formatter: standard
         filename: /tmp/instrument.log
         maxBytes: 10000000
@@ -25,12 +25,12 @@ handlers:
         encoding: utf8
 
 loggers:
-    instrument_logger:
-        level: DEBUG
+    instrument:
+        level: INFO
         handlers: [console, info_file_handler]
         propogate: no
 
 root:
-    level: WARN
+    level: INFO
     handlers: [console, info_file_handler]
 

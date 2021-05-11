@@ -14,13 +14,14 @@ from types import SimpleNamespace
 __author__ = "Brent Maranzano"
 __license__ = "MIT"
 
-
-def setup_logger(config_file, level):
-    """Start the logger
-    """
+"""
+def setup_logger(config_file="./lib/logger_conf.yml", level=logging.INFO):
     config = yaml_to_dict(config_file)
     logging.config.dictConfig(config)
     coloredlogs.install(level=level)
+    logger = logging.getLogger("instrument")
+    return logger
+"""
 
 
 def yaml_to_dict(yaml_file):
@@ -47,3 +48,9 @@ def dict_to_namespace(dict_obj):
     name = json.loads(json.dumps(dict_obj),
                       object_hook=lambda item: SimpleNamespace(**item))
     return name
+
+
+config = yaml_to_dict("lib/logger_conf.yml")
+logging.config.dictConfig(config)
+coloredlogs.install()
+logger = logging.getLogger("instrument")

@@ -5,27 +5,17 @@ Run a simulated controller with OPC UA server for testing.
 """
 import argparse
 import logging
-import logging.config
-import coloredlogs
 import random
 import threading
 from opcua import Server, ua
 from time import sleep
-from pdb import set_trace
 from lib import helper_functions
 
 __author__ = 'Brent Maranzano'
 __license__ = 'MIT'
 
 
-def setup_logger(config_file, level):
-    """Start the logger
-    """
-    config = helper_functions.yaml_to_dict(config_file)
-    logging.config.dictConfig(config)
-    coloredlogs.install(level=level)
-    logger = logging.getLogger(__name__)
-    return logger
+logger = logging.getLogger("instrument.simulated_controller")
 
 
 class SimulatedController(Server):
@@ -135,6 +125,5 @@ if __name__ == "__main__":
         default="INFO"
     )
     args = parser.parse_args()
-    logger = setup_logger(args.logger_file, args.debug_level)
     controller = SimulatedController(args.parameter_file)
     controller.run()

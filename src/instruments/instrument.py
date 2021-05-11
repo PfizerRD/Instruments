@@ -16,7 +16,7 @@ __author__ = "Brent Maranzano"
 __license__ = "MIT"
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("instrument")
 
 
 class Instrument(object):
@@ -50,7 +50,6 @@ class Instrument(object):
         returns (dict): Parameters.
         """
         params = helper_functions.yaml_to_dict(config_file)
-        logger.info("retrieved service parameters from file\n")
         return params
 
     def _execute_queue(self):
@@ -59,9 +58,9 @@ class Instrument(object):
         request has form {"service": service_name, "payload": service_data}
         """
         while True:
+            logger.debug("execute queue")
             request = self._queue.get()
             self._process_request(**request)
-            logger.info("execute_queue: {}\n".format(request))
             sleep(0.5)
         return
 
@@ -73,6 +72,7 @@ class Instrument(object):
         service (str): Name of service that produced request.
         payload (unknown): Request information provided by service.
         """
+        logger.debug("process request")
         if not self._validate_request(payload):
             return
         elif service == "opc":
@@ -101,12 +101,15 @@ class Instrument(object):
     def _process_opc(self, node, val, data):
         """Process an OPC request
         """
+        logger.debug("process opc")
         if str(node) in self._map:
             try:
                 response = getattr(self, self._map[str(node)])(val)
             except AttributeError:
                 pass
-#        self._opc_client.send(response)
+            else:
+                logger.debug("opc send: {}\n\n\n".format(response))
+#                self._opc_client.send(response)
 
     def _process_mqtt(self, payload):
         """Process MQTT request.
@@ -118,6 +121,7 @@ class Instrument(object):
         """Start the listening services if the service is defined
         in the configuration file.
         """
+        logger.info("starting services")
         if "opc" in self._params:
             self._opc_client = Opc.run(**self._extract_opc_params())
             self._create_opc_mapping()
@@ -150,4 +154,5 @@ class Instrument(object):
         """Start the instrument.
         """
         threading.Thread(target=self._execute_queue, daemon=True).start()
+        threading.Thread(target=self._update_data, daemon=True).start()
         self._start_services()

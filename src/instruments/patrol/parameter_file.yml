@@ -4,22 +4,22 @@ opc:
     endpoint: "opc.tcp://127.0.0.1:4840/instrument/"
     uri: "http://test.server"
     nodes:
-        name: CONFIG_NAME_DLV 
+        CONFIG_NAME_DLV:
             index: ns=2;i=2
             method: config_name
-        name: CONFIG_NAME_PAT 
+        CONFIG_NAME_PAT:
             index: ns=2;i=3
-        name: WATCHDOG_DLV 
+        WATCHDOG_DLV:
             index: ns=2;i=4
             method: watchdog
-        name: WATCHDOG_PAT 
+        WATCHDOG_PAT:
             index: ns=2;i=5
-        name: STRING1_DLV 
+        STRING1_DLV:
             index: ns=2;i=6
-            method: run
-        name: STRING1_PAT 
+            method: start_run
+        STRING1_PAT:
             index: ns=2;i=7
-        name: FLOAT1_PAT 
+        FLOAT1_PAT:
             index: ns=2;i=8
-        name: INT1_PAT 
+        INT1_PAT:
             index: ns=2;i=9
