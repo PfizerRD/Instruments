@@ -1,0 +1,37 @@
+endpoint: "opc.tcp://127.0.0.1:4840/instrument/"
+uri: "http://test.server"
+name: Test Server
+nodes:
+    object1:
+        CONFIG_NAME_DLV:
+            type: String
+            value: ""
+            writable: false
+        CONFIG_NAME_PAT:
+            type: String
+            value: ""
+            writable: true
+        WATCHDOG_DLV:
+            type: Boolean
+            value: true
+            writable: false
+        WATCHDOG_PAT:
+            type: Boolean
+            value: false
+            writable: true
+        STRING1_DLV:
+            type: String
+            value: ""
+            writable: false
+        STRING1_PAT:
+            type: String
+            value: ""
+            writable: true
+        FLOAT1_PAT:
+            type: Float
+            value: 0.0
+            writable: true
+        INT1_PAT:
+            type: Int16
+            value: 0
+            writable: true
