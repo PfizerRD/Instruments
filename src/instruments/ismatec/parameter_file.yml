@@ -1,0 +1,20 @@
+serial:
+    # requires null modem
+    port: /dev/ttyUSB0
+    baudrate: 9600
+    bytesize: 8
+    parity: N
+    stopbits: 1
+    timeout: 0.5
+opc:
+    endpoint: "opc.tcp://127.0.0.1:4840/instrument/"
+    uri: "http://test.server"
+    obj: object1
+    nodes:
+      - WATCHDOG_CONTROLLER
+      - WATCHDOG_INSTRUMENT
+      - COMMAND_CONTROLLER
+      - START_CONTROLLER
+      - STOP_CONTROLLER
+      - SETFLOW_CONTROLLER
+      - FLOWRATE_INSTRUMENT

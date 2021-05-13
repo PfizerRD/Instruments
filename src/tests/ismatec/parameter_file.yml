@@ -1,0 +1,33 @@
+endpoint: "opc.tcp://127.0.0.1:4840/instrument/"
+uri: "http://test.server"
+name: Test Server
+nodes:
+    object1:
+        WATCHDOG_CONTROLLER:
+            type: Boolean
+            value: true
+            writable: false
+        WATCHDOG_INSTRUMENT:
+            type: Boolean
+            value: true
+            writable: true
+        COMMAND_CONTROLLER:
+            type: String
+            value: ""
+            writable: false
+        START_CONTROLLER:
+            type: Boolean
+            value: false
+            writable: false
+        STOP_CONTROLLER:
+            type: Boolean
+            value: true
+            writable: false
+        SETFLOW_CONTROLLER:
+            type: Float
+            value: 0
+            writable: false
+        FLOWRATE_INSTRUMENT:
+            type: Float
+            value: 0
+            writable: true

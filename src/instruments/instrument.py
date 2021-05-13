@@ -8,7 +8,8 @@ import queue
 import threading
 import logging
 from lib import helper_functions
-from services.opc import Opc
+from services.opc.client import Client as OpcClient
+from services.opc.handler import Handler as OpcHandler
 from time import sleep
 from pdb import set_trace
 
@@ -32,12 +33,15 @@ class Instrument(object):
 
         Arguments
         config_file (str): Filename containing the configuration parameters for
-                            the instrument and services.
+            the instrument and services.
+        opc_handler (Subscription): Object to handle callbacks from OPC node
+            changes.
         """
         self._params = self._get_parameters(config_file)
         self._queue = queue.Queue()
         self._user = None
         self._password = None
+        self._commands = None
 
     def _get_parameters(self, config_file):
         """Read and parse the yaml file containing the
@@ -52,33 +56,45 @@ class Instrument(object):
         params = helper_functions.yaml_to_dict(config_file)
         return params
 
-    def _execute_queue(self):
-        """Pop a request off of the queue and execute. After execution
-        call self._respond.
-        request has form {"service": service_name, "payload": service_data}
+    def _connect_instrument(self):
+        """Create connection to instrument. Method to be over-ridden.
         """
+        pass
+
+    def _update_data(self):
+        """Periodically get the current instrument data and store
+        in class attribute to expedite responses to service requests.
+        Method is to be over-ridden.
+        """
+        pass
+
+    def _process_queue(self):
+        """Pop a request off of the queue and process the request.
+        """
+        logger.info("process queue thread starting")
         while True:
-            logger.debug("execute queue")
             request = self._queue.get()
+            # blocking call
             self._process_request(**request)
-            sleep(0.5)
         return
 
     def _process_request(self, service=None, payload=None):
-        """Process the request. If the request is valid, send it
-        to the appropriate subclass to handle the request.
+        """Process the request. Add additional functionality
+        here.
 
         Arguments
         service (str): Name of service that produced request.
-        payload (unknown): Request information provided by service.
+        payload (varies): Request information provided by service.
         """
         logger.debug("process request")
         if not self._validate_request(payload):
             return
-        elif service == "opc":
-            self._process_opc(*payload)
-        elif service == "mqtt":
-            self._process_mqtt(*payload)
+        if service == "opc":
+            response = self._process_opc_request(
+                node=str(payload[0].get_browse_name()),
+                value=payload[1]
+            )
+            self._opc_client.respond(**response)
 
     def _validate_request(self, request):
         """Validate that the request has the correct user and password,
@@ -98,61 +114,24 @@ class Instrument(object):
             logger.info("Received an invalid request.")
             return False
 
-    def _process_opc(self, node, val, data):
-        """Process an OPC request
-        """
-        logger.debug("process opc")
-        if str(node) in self._map:
-            try:
-                response = getattr(self, self._map[str(node)])(val)
-            except AttributeError:
-                pass
-            else:
-                logger.debug("opc send: {}\n\n\n".format(response))
-#                self._opc_client.send(response)
+    def _queue_request(self, request):
+        """Queue requests from the serivces.
 
-    def _process_mqtt(self, payload):
-        """Process MQTT request.
-        TODO
+        Arguments
+        request (dict): service request data
+            {"service": service_originator, "payload": service_data}
         """
-        pass
+        self._queue.put(request)
 
     def _start_services(self):
         """Start the listening services if the service is defined
         in the configuration file.
         """
         logger.info("starting services")
-        if "opc" in self._params:
-            self._opc_client = Opc.run(**self._extract_opc_params())
-            self._create_opc_mapping()
-
-    def _extract_opc_params(self):
-        """Extract the parameters to start the OPC service.
-        """
-        params = {
-            "endpoint": self._params["opc"]["endpoint"],
-            "nodes": [node["index"]
-                      for node in self._params["opc"]["nodes"].values()],
-            "queue": self._queue
-        }
-        return params
-
-    def _create_opc_mapping(self):
-        """Create the map between the node and the method called on node
-        change. The map expedites the method resolution, but cannot be created
-        until the OPC client connects.
-        """
-        self._map = dict()
-        for node in self._opc_client._nodes:
-            name = str(node.get_browse_name())
-            for k, v in self._params["opc"]["nodes"].items():
-                if k in name:
-                    if "method" in v:
-                        self._map[str(node)] = v["method"]
-
-    def start(self):
-        """Start the instrument.
-        """
-        threading.Thread(target=self._execute_queue, daemon=True).start()
+        threading.Thread(target=self._process_queue, daemon=True).start()
         threading.Thread(target=self._update_data, daemon=True).start()
-        self._start_services()
+        if "opc" in self._params:
+            self._opc_client = OpcClient.run(
+                sub_handler=OpcHandler(self._queue_request),
+                **self._params["opc"]
+            )
