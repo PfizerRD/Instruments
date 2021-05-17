@@ -11,19 +11,23 @@ nodes:
             type: Boolean
             value: true
             writable: true
-        COMMAND_CONTROLLER:
-            type: String
-            value: ""
-            writable: false
         START_CONTROLLER:
             type: Boolean
             value: false
             writable: false
+        START_INSTRUMEN:
+            type: Boolean
+            value: false
+            writable: true
         STOP_CONTROLLER:
             type: Boolean
             value: true
             writable: false
-        SETFLOW_CONTROLLER:
+        STOP_INSTRUMENT:
+            type: Boolean
+            value: true
+            writable: true
+        FLOWRATE_CONTROLLER:
             type: Float
             value: 0
             writable: false

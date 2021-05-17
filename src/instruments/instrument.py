@@ -8,8 +8,7 @@ import queue
 import threading
 import logging
 from lib import helper_functions
-from services.opc.client import Client as OpcClient
-from services.opc.handler import Handler as OpcHandler
+from services.opc.subscriber import Subscriber
 from time import sleep
 from pdb import set_trace
 
@@ -74,52 +73,29 @@ class Instrument(object):
         logger.info("process queue thread starting")
         while True:
             request = self._queue.get()
-            # blocking call
-            self._process_request(**request)
-        return
+            self._process_request(request)
 
-    def _process_request(self, service=None, payload=None):
-        """Process the request. Add additional functionality
-        here.
+    def _process_request(self, request):
+        """Proces the reqest.
 
         Arguments
-        service (str): Name of service that produced request.
-        payload (varies): Request information provided by service.
+        request (dict): Details of service request
+           command (str): Name of command to execute
+           parameters (command dependent): Parameters for command.
+           callback (fun): function to call back with command results.
         """
-        logger.debug("process request")
-        if not self._validate_request(payload):
-            return
-        if service == "opc":
-            response = self._process_opc_request(
-                node=str(payload[0].get_browse_name()),
-                value=payload[1]
-            )
-            self._opc_client.respond(**response)
+        # possible blocking call
+        response = getattr(self, request["command"])(request["parameters"])
+        request["callback"](response)
 
-    def _validate_request(self, request):
-        """Validate that the request has the correct user and password,
-        if it is set.
+    def _queue_request(self, **request):
+        """Queue requests.
 
         Arguments
-        request (dict): Request object
-
-        returns (bool): True if valid, False if invalid
-        """
-        if self._user is None and self._password is None:
-            return True
-        elif (request["user"] == self._user
-              and request["password"] == self._password):
-            return True
-        else:
-            logger.info("Received an invalid request.")
-            return False
-
-    def _queue_request(self, request):
-        """Queue requests from the serivces.
-
-        Arguments
-        request (dict): service request data
-            {"service": service_originator, "payload": service_data}
+        request (dict): Details of service request
+           command (str): Name of command to execute
+           parameters (command dependent): Parameters for command.
+           callback (fun): function to call back with command results.
         """
         self._queue.put(request)
 
@@ -130,8 +106,14 @@ class Instrument(object):
         logger.info("starting services")
         threading.Thread(target=self._process_queue, daemon=True).start()
         threading.Thread(target=self._update_data, daemon=True).start()
-        if "opc" in self._params:
-            self._opc_client = OpcClient.run(
-                sub_handler=OpcHandler(self._queue_request),
-                **self._params["opc"]
+        if "opc-client" in self._params:
+            self._opc_sub = Subscriber(
+                callback=self._queue_request,
+                **self._params["opc-client"]
+            )
+            self._opc_sub.run()
+        if "mqtt" in self._params:
+            self._mqtt_client = MqttClient.run(
+                callback=self._queue_request,
+                **self._params["mqtt"]
             )
