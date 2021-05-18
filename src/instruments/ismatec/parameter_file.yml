@@ -19,17 +19,24 @@ opc-client:
   endpoint: "opc.tcp://127.0.0.1:4840/instrument/"
   uri: "http://test.server"
   obj: object1
-  watchdog: WATCHDOG_CONTROLLER
+  watchdog:
+    controller: WATCHDOG_CONTROLLER
+    instrument: WATCHDOG_INSTRUMENT
   nodes:
-    WATCHDOG_CONTROLLER:
-      command: watchdog
-      repsond: WATCHDOG_INSTRUMENT
     START_CONTROLLER:
-      command: start
-      repsond: START_INSTRUMENT
+      request:
+        command: start
+      respond: START_INSTRUMENT
     STOP_CONTROLLER:
-      command: stop
-      repsond: STOP_INSTRUMENT
-    FLOWRATE_CONTROLLER:
-      command: set_flowrate
-      repsond: FLOWRATE_INSTRUMENT
+      request:
+        command: stop
+      respond: STOP_INSTRUMENT
+    SET_FLOWRATE_CONTROLLER:
+      request:
+        command: set_flowrate
+        parameters: true
+      respond: SET_FLOWRATE_INSTRUMENT
+    GET_FLOWRATE_CONTROLLER:
+      request:
+        command: get_flowrate
+      respond: GET_FLOWRATE_INSTRUMENT

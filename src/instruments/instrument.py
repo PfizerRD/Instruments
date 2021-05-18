@@ -85,7 +85,8 @@ class Instrument(object):
            callback (fun): function to call back with command results.
         """
         # possible blocking call
-        response = getattr(self, request["command"])(request["parameters"])
+        return
+        response = getattr(self, request["command"])(**request["kwargs"])
         request["callback"](response)
 
     def _queue_request(self, **request):
