@@ -7,10 +7,11 @@ variuos protocols (MQTT, OPC UA).
 import queue
 import threading
 import logging
+import inspect
+from time import sleep
 from lib import helper_functions
 from services.opc.subscriber import Subscriber
-from time import sleep
-from pdb import set_trace
+
 
 __author__ = "Brent Maranzano"
 __license__ = "MIT"
@@ -76,7 +77,7 @@ class Instrument(object):
             self._process_request(request)
 
     def _process_request(self, request):
-        """Proces the reqest.
+        """Proces the reqest. Note that the command may be blocking.
 
         Arguments
         request (dict): Details of service request
@@ -84,10 +85,25 @@ class Instrument(object):
            parameters (command dependent): Parameters for command.
            callback (fun): function to call back with command results.
         """
-        # possible blocking call
-        return
-        response = getattr(self, request["command"])(**request["kwargs"])
-        request["callback"](response)
+        response = False
+        command = getattr(self, request["command"], False)
+        if command:
+            # Some services (e.g. OPC) always pass arguments,
+            # so check if the method requires one.
+            if len(inspect.getfullargspec(command).args) == 1:
+                response = command()
+            else:
+                response = command(request["parameters"])
+        else:
+            try:
+                self._serial.write(command)
+                sleep(0.3)
+                response = self._serial.readline()
+            except Exception:
+                logger.error("Error writing serial command {}".format(command))
+
+        if response:
+            request["callback"](response)
 
     def _queue_request(self, **request):
         """Queue requests.

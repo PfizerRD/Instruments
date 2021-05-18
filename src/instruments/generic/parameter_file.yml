@@ -15,10 +15,10 @@ opc-client:
   obj: object1
   nodes:
     START_CONTROLLER:
-      command: start
+      command: f"3H{chr(13)}"
       respond: START_INSTRUMENT
     STOP_CONTROLLER:
-      command: stop
+      command: f"3I{chr(13)}"
       respond: STOP_INSTRUMENT
     SET_FLOWRATE_CONTROLLER:
       command: set_flowrate

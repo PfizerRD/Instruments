@@ -84,7 +84,7 @@ class SimulatedController(Server):
             watchdog.start()
             for i in range(10):
                 logger.info("set flow")
-                self._nodes["FLOWRATE_CONTROLLER"].set_value(random())
+                self._nodes["SET_FLOWRATE_CONTROLLER"].set_value(random())
                 sleep(2)
                 logger.info("start")
                 self._nodes["START_CONTROLLER"].set_value(True)

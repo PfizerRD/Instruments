@@ -1,25 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Bronkhorst mass flow meter
+Ismatec pump control
 """
 import argparse
 import logging
-import threading
-# import serial
 from random import random
+from serial import Serial
 from time import sleep
 from instruments.instrument import Instrument
-from instruments.bronkhorst.opc import Opc
-from lib import helper_functions
-from pdb import set_trace
 
 __author__ = "Brent Maranzano"
 __license__ = "MIT"
 
 
-class Bronkhorst(Instrument, Opc):
-    """Object to interact with Bronkhorst flow meter.
+logger = logging.getLogger("instrument.bronkhorst")
+
+
+class Generic(Instrument):
+    """Generic serial instrument
     """
 
     def __init__(self, config_file):
@@ -29,44 +28,32 @@ class Bronkhorst(Instrument, Opc):
         config_file (str): Filename containing the configuration parameters for
                             the instrument and services.
         """
-        super(Bronkhorst, self).__init__(config_file)
+        super(Generic, self).__init__(config_file)
         self._about = {
-            "name": "Bronkhorst",
-            "parameters": "mass flow rate"
+            "name": "Generic"
          }
-        self._data = {
-            "measurement": 0
-        }
+        self._data = {}
 
     def _connect_instrument(self):
         """Connect to the serial instrument
-        TODO
+
+        Arguments
+        params (dict): Parameters to start instrument
         """
         logger.info("connecting to serial")
-        self._serial = "serial connection"
+        self._serial = Serial(**self._params["serial"])
 
     def _update_data(self):
         """Update the instrument data
         TODO
         """
         logger.info("starting thread to update data")
-        while True:
-            """
-            ser.write()
-            ser.readline()
-            """
-            self._data = {
-                "measurement": random()
-            }
-            logger.debug(self._data)
-            sleep(2)
+        return
 
     def main(self):
         """Entry point
         """
         self._connect_instrument()
-        threading.Thread(target=self._execute_queue, daemon=True).start()
-        threading.Thread(target=self._update_data, daemon=True).start()
         self._start_services()
 
 
@@ -88,7 +75,5 @@ if __name__ == "__main__":
         default="INFO"
     )
     args = parser.parse_args()
-    helper_functions.setup_logger(level=args.debug_level)
-    logger = logging.getLogger("bronkhorst")
-    bronkhorst = Bronkhorst(args.parameter_file)
-    bronkhorst.main()
+    ismatec = Ismatec(args.parameter_file)
+    ismatec.main()

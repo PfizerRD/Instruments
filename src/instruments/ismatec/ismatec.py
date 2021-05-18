@@ -9,10 +9,6 @@ from random import random
 from serial import Serial
 from time import sleep
 from instruments.instrument import Instrument
-from instruments.ismatec import commands
-import projects.ape.opc_handler
-from lib import helper_functions
-from pdb import set_trace
 
 __author__ = "Brent Maranzano"
 __license__ = "MIT"
@@ -34,13 +30,12 @@ class Ismatec(Instrument):
         """
         super(Ismatec, self).__init__(config_file)
         self._about = {
-            "name": "Bronkhorst",
-            "parameters": "mass flow rate"
+            "name": "Ismatec",
+            "parameters": "rpm"
          }
         self._data = {
             "measurement": 0
         }
-        self._process_opc_request = projects.ape.opc_handler.process_request
 
     def _connect_instrument(self):
         """Connect to the serial instrument
@@ -68,12 +63,20 @@ class Ismatec(Instrument):
     def start(self):
         """Start the pump.
         """
-        self._ser.write(self._commands.start)
+        self._serial.write(f"3H{chr(13)}".encode('ascii'))
+        return True
 
     def stop(self):
         """Stop the pump.
         """
-        self._ser.write(self._commands.stop)
+        self._serial.write(f"3I{chr(13)}".encode('ascii'))
+        return True
+
+    def set_flowrate(self, val):
+        return val
+
+    def get_flowrate(self):
+        return 3
 
     def main(self):
         """Entry point

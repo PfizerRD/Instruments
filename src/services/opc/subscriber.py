@@ -4,6 +4,7 @@
 General OPC UA client.
 """
 import logging
+import threading
 from opcua import Client
 from pdb import set_trace
 
@@ -12,22 +13,6 @@ __license__ = "MIT"
 
 
 logger = logging.getLogger("instrument.opc.client")
-
-
-class SubHandler(object):
-    def __init__(self, params, node_map, callback):
-        self._params = params
-        self._map = node_map
-        self._callback = callback
-
-    def datachange_notification(self, node, val, data):
-        """This method is called on subscribed node changes.
-        see https://python-opcua.readthedocs.io/en/latest/subscription.html
-        """
-        # If the node is the watchdog node, then update without
-        # calling instrument method to reduce CPU cycles.
-        if node == self._map[self._params["watchdog"]["controller"]]:
-            self._update_watchdog(val)
 
 
 class Subscriber():
@@ -137,7 +122,7 @@ class Subscriber():
         Arguments
         val (?): The value to return to the watchdog tag.
         """
-        self.respond(self._params["watchdog"]["instrument"], val)
+        # self.respond(self._params["watchdog"]["instrument"], val)
 
     def respond(self, node, value):
         """Write a value to the node.
@@ -146,8 +131,7 @@ class Subscriber():
         node (str): String associated with node (see self._map)
         value (varries): value to write
         """
-        print(self._map[node], value)
-        # self._map[node].set_value(value)
+        self._map[node].set_value(value)
 
     def datachange_notification(self, node, val, data):
         """This method is called on subscribed node changes.
@@ -155,36 +139,27 @@ class Subscriber():
         """
         # If the node is the watchdog node, then update without
         # calling instrument method to reduce CPU cycles.
-        if node == self._map[self._params["watchdog"]["controller"]]:
-            self._update_watchdog(val)
+        if "watchdog" in self._params:
+            if node == self._map[self._params["watchdog"]["controller"]]:
+                self._update_watchdog(val)
         else:
-            return
             name = self._get_name(node)
             # Call the instrument callback with the node information:
             #     desired run command,
             #     callback to the respond method with the node as parameter
-            if "parameters" in self._params["nodes"][name]["request"]:
-                self._callback(
-                    command=self._params["nodes"][name]["request"]["command"],
-                    parameters=(val),
-                    callback=lambda x: self._respond(
-                        self._params["nodes"][name]["respond"], x),
-                )
-            if "parameters" in self._params["nodes"][name]["request"]:
-                self._callback(
-                    command=self._params["nodes"][name]["request"]["command"],
-                    parameters=None,
-                    callback=lambda x: self._respond(
-                        self._params["nodes"][name]["respond"], x),
-                )
+            self._callback(
+                command=self._params["nodes"][name]["command"],
+                parameters=val,
+                callback=lambda x: self.respond(
+                    self._params["nodes"][name]["respond"], x),
+            )
 
     def run(self):
         """Connect to client, and subscribe to nodes.
         """
         self._connect(self._params["endpoint"])
-        # handler = SubHandler(self.datachange_notification)
-        sub = self._client.create_subscription(1000, self)
         self._map = self._create_node_map()
+        sub = self._client.create_subscription(1000, self)
         nodes = self._get_monitor_nodes()
         handle = sub.subscribe_data_change(nodes)
         logger.info("OPC subscription started")
