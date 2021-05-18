@@ -45,6 +45,8 @@ class Ismatec(Instrument):
         """
         logger.info("connecting to serial")
         self._serial = Serial(**self._params["serial"])
+        self._serial.write(f"@1{chr(13)}".encode('ascii'))
+        self._serial.write(f"1M{chr(13)}".encode('ascii'))
 
     def _update_data(self):
         """Update the instrument data
@@ -63,20 +65,25 @@ class Ismatec(Instrument):
     def start(self):
         """Start the pump.
         """
-        self._serial.write(f"3H{chr(13)}".encode('ascii'))
-        return True
+        print("start")
+        self._serial.write(f"1H{chr(13)}".encode('ascii'))
+        return self._serial.read(1)
 
     def stop(self):
         """Stop the pump.
         """
-        self._serial.write(f"3I{chr(13)}".encode('ascii'))
-        return True
+        print("stop")
+        self._serial.write(f"1I{chr(13)}".encode('ascii'))
+        return self._serial.read(1)
 
     def set_flowrate(self, val):
-        return val
+        val = str(int(val)).zfill(5)
+        print(val)
+        self._serial.write(f"1S{val}{chr(13)}".encode('ascii'))
 
     def get_flowrate(self):
-        return 3
+        self._serial.write(f"1S{chr(13)}".encode('ascii'))
+        return self._serial.readline()
 
     def main(self):
         """Entry point

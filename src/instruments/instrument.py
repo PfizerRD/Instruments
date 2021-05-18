@@ -75,6 +75,7 @@ class Instrument(object):
         while True:
             request = self._queue.get()
             self._process_request(request)
+            sleep(0.3)
 
     def _process_request(self, request):
         """Proces the reqest. Note that the command may be blocking.
@@ -96,6 +97,7 @@ class Instrument(object):
                 response = command(request["parameters"])
         else:
             try:
+                command = eval(request["command"]).encode('ascii')
                 self._serial.write(command)
                 sleep(0.3)
                 response = self._serial.readline()

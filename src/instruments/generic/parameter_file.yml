@@ -1,6 +1,5 @@
 # serial connection settings
 serial:
-  # requires null modem
   port: /dev/ttyUSB0
   baudrate: 9600
   bytesize: 8
@@ -21,8 +20,8 @@ opc-client:
       command: f"3I{chr(13)}"
       respond: STOP_INSTRUMENT
     SET_FLOWRATE_CONTROLLER:
-      command: set_flowrate
+      command: f"3E{chr(13)}"
       respond: SET_FLOWRATE_INSTRUMENT
     GET_FLOWRATE_CONTROLLER:
-      command: get_flowrate
+      command: f"3E{chr(13)}"
       respond: GET_FLOWRATE_INSTRUMENT

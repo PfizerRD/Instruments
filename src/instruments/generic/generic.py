@@ -59,7 +59,7 @@ class Generic(Instrument):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Service to call queued Bronkhorst serial methods."
+        description="Service to relay services to serial connection."
     )
     parser.add_argument(
         "--parameter_file",
@@ -75,5 +75,5 @@ if __name__ == "__main__":
         default="INFO"
     )
     args = parser.parse_args()
-    ismatec = Ismatec(args.parameter_file)
-    ismatec.main()
+    generic = Generic(args.parameter_file)
+    generic.main()
