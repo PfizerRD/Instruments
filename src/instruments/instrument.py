@@ -47,20 +47,6 @@ class Instrument(object):
             request = self._queue.get()
             self._process_request(**request)
 
-    def _process_request(self, command, callback):
-        """Proces the reqest. Note that the command may be blocking.
-
-        Arguments
-       command (str): Name of command to execute
-       callback (fun): function to call back with command results.
-        """
-        self._ser.write(command)
-        sleep(0.3)
-        response = self._ser.readline()
-
-        if callback is not None:
-            callback(response)
-
     def _queue_request(self, **request):
         """Queue requests.
 

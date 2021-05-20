@@ -5,8 +5,8 @@ Ismatec pump control
 """
 import argparse
 import logging
-from serial import Serial
-from instruments.instrument import Instrument
+import asyncio
+import serial_asyncio
 from pdb import set_trace
 from time import sleep
 
@@ -17,7 +17,7 @@ __license__ = "MIT"
 logger = logging.getLogger("instrument.ismatec")
 
 
-class Ismatec(Instrument):
+class Ismatec():
     """Ismatec pump controller.
     """
 
@@ -27,67 +27,47 @@ class Ismatec(Instrument):
         Arguments
         port (str): Device port
         """
-        super().__init__(port)
+        self._connect(port)
 
-    def connect(self):
+    def _connect(self, port):
         """Connect to the serial instrument
 
         Arguments
         params (dict): Parameters to start instrument
         """
         logger.info("connecting to serial")
-        self._ser = Serial(port=self._port, baudrate=9600, bytesize=8,
+        self._ser = Serial(port=port, baudrate=9600, bytesize=8,
                            parity="N", stopbits=1, timeout=0.5)
         self._ser.write(f"@1{chr(13)}".encode('ascii'))
         self._ser.write(f"1M{chr(13)}".encode('ascii'))
 
-    def _process_request(self, command=None, callback=None, **kwargs):
-        response = True
-        if command == "start":
-            self._ser.write(f"1H{chr(13)}".encode('ascii'))
-        elif command == "stop":
-            self._ser.write(f"1I{chr(13)}".encode('ascii'))
-        elif command == "set_flowrate":
-            flowrate = str(int(kwargs["flowrate"])).zfill(5)
-            string = f"1S{flowrate}{chr(13)}"
-            self._ser.write(string.encode('ascii'))
-        elif command == "get_flowrate":
-            self._ser.write(f"1S{chr(13)}".encode('ascii'))
-            sleep(0.3)
-            response = float(self._ser.readline().decode().split("\r")[0].strip("*"))
-        if callback is not None:
-            callback(response)
-        sleep(0.3)
-
-    def start(self, callback=None):
+    def start(self):
         """Start the pump.
         """
-        self._queue_request(command="start", callback=callback)
+        self._ser.write(f"1H{chr(13)}".encode('ascii'))
 
-    def stop(self, callback=None):
+    def stop(self):
         """Stop the pump.
         """
-        self._queue_request(command="stop", callback=callback)
+        self._ser.write(f"1I{chr(13)}".encode('ascii'))
 
-    def set_flowrate(self, val, callback=None):
+    def set_flowrate(self, val):
         """Set the pump rpm (1/min)
 
         Argument
         val (float): Pump RPMs (1/min)
         """
-        self._queue_request(command="set_flowrate", flowrate=val,
-                            callback=callback)
+        val = str(int(val)).zfill(5)
+        self._ser.write(f"1S{val}{chr(13)}".encode('ascii'))
 
-    def get_flowrate(self, callback=None):
+    def get_flowrate(self):
         """Get the pump rpm (1/min)
         """
-        self._queue_request(command="get_flowrate", callback=callback)
+        self._ser.write(f"1S{chr(13)}".encode('ascii'))
 
-    def main(self):
-        """Entry point
-        """
-        self.connect()
-        self._start_threads()
+    async def send(w, command):
+        w.write(command)
+        await asyncio.sleep(0.3)
 
 
 if __name__ == "__main__":
@@ -109,10 +89,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     instrument = Ismatec(args.port)
     instrument.main()
-    instrument.set_flowrate(555)
+    instrument.set_flowrate(944)
     instrument.start()
     instrument.get_flowrate(callback=print)
-    sleep(2)
+    sleep(5)
     instrument.stop()
     try:
         while instrument._queue.empty() is False:
