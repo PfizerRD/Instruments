@@ -1,40 +1,20 @@
 version: '3.5'
 
 services:
-  instrument:
+  project:
     build:
       context: .
-      dockerfile: instruments/${INSTRUMENT}/Dockerfile
-    image: ${INSTRUMENT}
-    container_name: ${INSTRUMENT}
+      dockerfile: src/project/Dockerfile
+    image: project
+    container_name: project
     networks:
       - instrument
-    ports:
-      - "${SOCKET_PORT}:${SOCKET_PORT}"
     devices:
-      - "/dev/ttyACM0:/dev/ttyACM0"
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
     restart: unless-stopped
-    env_file:
-      - .env
-    command: ["--instrument_port", "/dev/ttyACM0", "--socket_ip", "${SOCKET_HOST}", "--socket_port", "${SOCKET_PORT}", "--host", "${HOST}"]
-  socket-mqtt:
-    build:
-      context: ./socket-mqtt
-      dockerfile: Dockerfile
-    image: socket-mqtt
-    container_name: socket-mqtt
-    env_file:
-      - .env
-    command: ["--socket_host", "${SOCKET_HOST}", "--socket_port", "${SOCKET_PORT}", "--mqtt_broker", "${MQTT_BROKER}", "--group_id", "${GROUP_ID}", "--device_id", "${DEVICE_ID}"]
-    networks:
-      - equipment
-    restart: unless-stopped
-    depends_on:
-      - instrument
-
 
 networks:
-  equipment:
+  instrument:
     ipam:
       driver: default
       config:
