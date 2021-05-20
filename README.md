@@ -22,8 +22,8 @@ a serial or BSD socket API.
 3. Start the services using docker-compose.
    
 ## Author
-   Giuseppe Cogoni
-   Brent Maranzano
+   Giuseppe Cogoni<br/>
+   Brent Maranzano<br/>
    John Pfisterer
 
 ## License
