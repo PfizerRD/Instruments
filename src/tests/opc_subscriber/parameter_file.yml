@@ -1,0 +1,11 @@
+endpoint: "opc.tcp://127.0.0.1:4840/instrument/"
+uri: "http://test.server"
+name: Test Server
+object:
+  name: object1
+  nodes:
+    WATCHDOG_CONTROLLER:
+    START_CONTROLLER:
+    STOP_CONTROLLER:
+    SET_FLOWRATE_CONTROLLER:
+    GET_FLOWRATE_CONTROLLER:

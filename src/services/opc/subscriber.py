@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-General OPC UA client.
+Class to monitor OPC UA server nodes.
 """
+import argparse
 import logging
-import threading
 from opcua import Client
 from pdb import set_trace
+from lib.helper_functions import yaml_to_dict
 
 __author__ = "Brent Maranzano"
 __license__ = "MIT"
@@ -16,27 +17,50 @@ logger = logging.getLogger("instrument.opc.client")
 
 
 class Subscriber():
-    """Create a service to monitor OPC nodes.
+    """Create a subscription service to monitor node value changes. Upon change
+    call a callback function to handle changes. The name representing the nodes
+    must be unique.  That means monitoring identical node names in different
+    parts of the OPC server tree is not permitted.
     """
 
-    def __init__(self, callback, **params):
+    def __init__(self, endpoint):
         """Instantiate an the base class OPC client.
 
         Arguments
-        callback (func): Function to call on node value changes.
-        params (dict): Configuration parameters to start service.
+        endpoint (str): Server address
+        """
+        self._endpoint = endpoint
+        self._monitor = []  # list of tuples that define the nodes (see _get_nodes)
+        self._map = dict()  # map between name and Node object
+
+    @classmethod
+    def from_dictionary(cls, **params):
+        """Instantiate an the subscriber from a ditionary
+
+        Arguments
+        params (dict): Configuration parameters to start subscription service.
             The dictionary should contain:
             endpoint (str): OPC server address
             uri (str): the namespace for the nodes
             obj (str): the parent object node of the nodes
-            nodes (dict): Keys are the name of the nodes to monitor. The
-                values are dictionaries:
-                    "respond": node to respond
-            watchdog (optional) (str): the name of the node used for
-                the watchdog
+            nodes (list): list of node names to subscribe
         """
-        self._callback = callback
-        self._params = params
+        sub = cls(endpoint=params["endpoint"])
+        sub._monitor = [(params["uri"], params["object"]["name"],
+                         params["object"]["nodes"])]
+        return sub
+
+    @classmethod
+    def from_file(cls, parameter_file):
+        """Instantiate the subscriber from a parameter file.
+
+        Arguments
+        parameter_file (str): Name of YAML confiugration file.
+        See from_dictionary for required items in YAML.
+        """
+        parameters = yaml_to_dict(parameter_file)
+        sub = cls.from_dictionary(**parameters)
+        return sub
 
     def _connect(self, endpoint):
         """Conncect to the OPC UA server.
@@ -47,17 +71,36 @@ class Subscriber():
         self._client = Client(endpoint)
         self._client.connect()
 
-    def _get_nodes(self, idx, obj, names):
+    def set_callback(self, callback):
+        """Set the callback to be called on changes
+        in the monitored node values.
+
+        Arguments
+        callback (func): Function to be called on node changes.
+        """
+        self._callback = callback
+
+    def add_nodes(self, uri, obj, nodes):
+        """Add nodes to the subscription.
+
+        Arguments
+        uri (str): the namespace for the nodes
+        obj (str): the parent object node of the nodes
+        nodes (list): list of node names to subscribe
+        """
+        self._monitor.append((uri, obj, nodes))
+
+    def _get_nodes(self, uri, obj, names):
         """Get links to the OPC nodes.
 
         Arguments
-        idx (int): Namespace index
+        uri (str): Namespace
         obj (str): Object name
         names (list): List of string of node names
 
         returns (list): List of Nodes
         """
-        idx = self._client.get_namespace_index(idx)
+        idx = self._client.get_namespace_index(uri)
         root = self._client.get_root_node()
         nodes = [root.get_child(self._get_path(idx, obj, n)) for n in names]
         return nodes
@@ -87,43 +130,6 @@ class Subscriber():
         """
         return [k for k, v in self._map.items() if v == node][0]
 
-    def _create_node_map(self):
-        """Create a map between node names and Node objects
-        for fast lookup.
-        """
-        # Get all the nodes defined in the parameters dictionary.
-        names = list(self._params["nodes"].keys())\
-            + [v["respond"] for k, v in self._params["nodes"].items()]
-        if "watchdog" in self._params:
-            names += [self._params["watchdog"]["controller"],
-                      self._params["watchdog"]["instrument"]]
-
-        nodes = self._get_nodes(
-                    self._params["uri"],
-                    self._params["obj"],
-                    names
-        )
-
-        return {k: v for k, v in zip(names, nodes)}
-
-    def _get_monitor_nodes(self):
-        """Get the nodes to be monitored.
-        """
-        names = list(self._params["nodes"].keys())
-        if "watchdog" in self._params:
-            names += [self._params["watchdog"]["controller"]]
-
-        return self._get_nodes(self._params["uri"], self._params["obj"], names)
-
-    def _update_watchdog(self, val):
-        """Update the watchdog. This is handled at the subscription
-        service level and not instrument to reduce CPU overhead.
-
-        Arguments
-        val (?): The value to return to the watchdog tag.
-        """
-        # self.respond(self._params["watchdog"]["instrument"], val)
-
     def respond(self, node, value):
         """Write a value to the node.
 
@@ -137,29 +143,40 @@ class Subscriber():
         """This method is called on subscribed node changes.
         see https://python-opcua.readthedocs.io/en/latest/subscription.html
         """
-        # If the node is the watchdog node, then update without
-        # calling instrument method to reduce CPU cycles.
-        if "watchdog" in self._params:
-            if node == self._map[self._params["watchdog"]["controller"]]:
-                self._update_watchdog(val)
-        else:
-            name = self._get_name(node)
-            # Call the instrument callback with the node information:
-            #     desired run command,
-            #     callback to the respond method with the node as parameter
-            self._callback(
-                command=self._params["nodes"][name]["command"],
-                parameters=val,
-                callback=lambda x: self.respond(
-                    self._params["nodes"][name]["respond"], x),
-            )
+        name = self._get_name(node)
+        self._callback(name=name, value=val)
 
     def run(self):
         """Connect to client, and subscribe to nodes.
         """
-        self._connect(self._params["endpoint"])
-        self._map = self._create_node_map()
+        self._connect(self._endpoint)
+        for s in self._monitor:
+            nodes = self._get_nodes(s[0], s[1], s[2])
+            self._map.update({k: v for k, v in zip(s[2], nodes)})
+        nodes = [v for k, v in self._map.items()]
         sub = self._client.create_subscription(1000, self)
-        nodes = self._get_monitor_nodes()
         handle = sub.subscribe_data_change(nodes)
         logger.info("OPC subscription started")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="OPC UA node subscriber")
+    parser.add_argument(
+        "--parameter_file",
+        help="YAML file defining parameters for subscription",
+        type=str,
+        default="./parameter_file.yml"
+    )
+    parser.add_argument(
+        "--debug_level",
+        help="debugger level (e.g. INFO, WARN, DEBUG, ...)",
+        type=str,
+        default="INFO"
+    )
+    args = parser.parse_args()
+    sub = Subscriber.from_file(args.parameter_file)
+
+    def callback(*args, **kwargs):
+        print(args, kwargs.items())
+    sub.set_callback(callback)
+    sub.run()
